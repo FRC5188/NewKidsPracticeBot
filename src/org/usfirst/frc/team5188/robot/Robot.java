@@ -27,7 +27,6 @@ public class Robot extends IterativeRobot {
 	
 	Encoder rEncoder = new Encoder(0,1);
 	Encoder lEncoder = new Encoder(2,3);
-	Encoder shooterEncoder = new Encoder(4,5);
 	
 	M_I2C i2c = new M_I2C();
 	AHRS gyro = new AHRS(SerialPort.Port.kMXP);
@@ -36,10 +35,6 @@ public class Robot extends IterativeRobot {
 	DriverStation driverStation = DriverStation.getInstance();
 	
 	Drive drive = new Drive(0, 1);
-	VictorSP climber = new VictorSP(2);
-	VictorSP elevator = new VictorSP(3);
-	VictorSP shooter = new VictorSP(4);
-//	Shooter shooter = new Shooter(4, true, new Pats_PID_Controller(), shooterEncoder);
 	
 	GyroSensorActuator pidGyro = new GyroSensorActuator(drive, gyro);
 	EncoderSensor encoderSense = new EncoderSensor(lEncoder, rEncoder);
@@ -68,7 +63,7 @@ public class Robot extends IterativeRobot {
 		lEncoder.reset();
 		rEncoder.reset();
 		gyro.reset();
-//		shooterEncoder.setDistancePerPulse(1/128);
+
 		
 	}
 	@Override
@@ -191,12 +186,6 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void teleopPeriodic() {
-		
-		encoderPid.stop();
-		drive.stop();
-		
-		
-
 		double throttle = -Control.drive.get(CTRL_AXIS.LY);
 		double turn = Control.drive.get(CTRL_AXIS.RX);
 		double shifter = Control.drive.isButtonHeld(CTRL_BTN.R) ? 0.5 : 1.0;
@@ -205,11 +194,9 @@ public class Robot extends IterativeRobot {
 			drive.setRDrive(-Control.drive.get(CTRL_AXIS.RY)*shifter);
 			drive.setLDrive(-Control.drive.get(CTRL_AXIS.LY)*shifter);
 		}else{
-//			drive.setRDrive(throttle * shifter * (1 + Math.min(0, turn)));
-//			drive.setLDrive(throttle * shifter * (1 - Math.max(0, turn)));
+
 			drive.setRDrive(throttle * shifter * (1 - Math.max(0, turn)));
 			drive.setLDrive(throttle * shifter * (1 + Math.min(0, turn)));
-//			
 		}
 		
 		if (Control.operator.isButtonPushed(CTRL_BTN.B)){
@@ -220,43 +207,9 @@ public class Robot extends IterativeRobot {
 		counter++;
 		if(counter >= 200){
 			System.out.println("Left distance: " + lEncoder.getDistance() + " Right distance: " + rEncoder.getDistance());
-			counter = 0;
-			
+			counter = 0;		
 		}
-		
-		if (Control.operator.get(CTRL_AXIS.RY) <= 0){
-			
-			climber.set(-Control.operator.get(CTRL_AXIS.RY));
-		}
-		
-		
-		if (Control.operator.get(CTRL_AXIS.RTrigger) > .5){
-			elevator.set(0.5);
-		}else if (Control.operator.get(CTRL_AXIS.LTrigger) > .5){
-			elevator.set(-0.5);
-		}else{
-			elevator.set(0);
-			
-		}
-        if(Control.operator.isButtonHeld(CTRL_BTN.A)){
-        	shooter.set(1);
-        }else{
-        	shooter.set(0);
-        	
-        }
-//        	shooter.start_pid();
-//        	while(!Control.operator.isButtonPushed(CTRL_BTN.A)){
-//        		counter ++;
-//        		if((counter % 10000) == 0){
-//        			System.out.println("IN PID LOOP: " + "Throttle: " + Control.operator.get(CTRL_AXIS.LY) + " Speed: " + shooter.read() + " Set Point: " + shooter.getSetPoint() + " Error: " + shooter.controller.getError());
-//        		}
-//        		shooter.setRPM(2675);
-//        		shooter.controller.setPIDS(.00006, 0.000008, -0.000000001);
-//        		}
-//        	}
-//        	shooter.stop();
-//		System.out.println("R Encoder: " + rEncoder.getDistance() + " L Encoder: " + lEncoder.getDistance());
-        }
+	}
 	
 	public void VisionTrack(double target){
 		PixyPacket pkt = i2c.getPixy();
