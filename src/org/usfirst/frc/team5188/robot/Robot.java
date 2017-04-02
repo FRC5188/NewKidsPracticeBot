@@ -1,7 +1,6 @@
 
 package org.usfirst.frc.team5188.robot;
 
-import java.util.Timer;
 import java.util.TimerTask;
 
 import com.kauailabs.navx.frc.AHRS;
@@ -14,6 +13,8 @@ import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import modules.Pats_PID_Controller;
+import edu.wpi.first.wpilibj.Timer;
+
 
 public class Robot extends IterativeRobot {
 	
@@ -25,24 +26,25 @@ public class Robot extends IterativeRobot {
 	String auto;
 	double error = 0;
 	
-	Encoder rEncoder = new Encoder(0,1);
 	Encoder lEncoder = new Encoder(2,3);
+
 	
-	M_I2C i2c = new M_I2C();
+//	M_I2C i2c = new M_I2C();
 	AHRS gyro = new AHRS(SerialPort.Port.kMXP);
-	PixySensor pidPixy = new PixySensor(i2c);
+//	PixySensor pidPixy = new PixySensor(i2c);
 	
 	DriverStation driverStation = DriverStation.getInstance();
 	
 	Drive drive = new Drive(0, 1);
+	Auto autoFunc = new Auto(drive, gyro, lEncoder);
+
+
 	
 	GyroSensorActuator pidGyro = new GyroSensorActuator(drive, gyro);
-	EncoderSensor encoderSense = new EncoderSensor(lEncoder, rEncoder);
-	EncoderActuator encoderActuator = new EncoderActuator(drive);
 	SendableChooser<String> chooser = new SendableChooser<>();
 	
-	Pats_PID_Controller pixyPid = new Pats_PID_Controller(0.5, .006 , .0006 , 10, pidPixy, pidGyro);
-	Pats_PID_Controller encoderPid = new Pats_PID_Controller(0.5, 0.006 , 0.0006, 10, encoderSense, encoderActuator); 
+//	Pats_PID_Controller pixyPid = new Pats_PID_Controller(0.5, .006 , .0006 , 10, pidPixy, pidGyro);
+
 
 	Timer time = new Timer();
 	boolean base = false, timer = false;
@@ -53,26 +55,20 @@ public class Robot extends IterativeRobot {
 		chooser.addDefault("Default Auto", defaultAuto);
 		chooser.addObject("Gear", gear);
 		chooser.addObject("Base Line", baseline);		
-		chooser.addObject("Gear Time", gearTime);
+		chooser.addObject("Time", gearTime);
 
 		
 		SmartDashboard.putData("Auto Choices", chooser);
-		rEncoder.setDistancePerPulse(0.0071585709635417);
-		lEncoder.setDistancePerPulse(0.0071585709635417);
-//		rEncoder.setReverseDirection(true);
+
+		lEncoder.setDistancePerPulse(0.08590292414);
 		lEncoder.reset();
-		rEncoder.reset();
 		gyro.reset();
 
 		
 	}
 	@Override
 	public void autonomousInit() {
-		lEncoder.reset();
-		rEncoder.reset();
-		rEncoder.setDistancePerPulse(.00716);
-		lEncoder.setDistancePerPulse(.00716);
-		encoderPid.stop();
+//		lEncoder.reset();
 		base = false;
 		timer = false;
 		auto = chooser.getSelected();
@@ -87,93 +83,44 @@ public class Robot extends IterativeRobot {
 		switch (auto){
 		
 		case gearTime:
-				while (!timer && driverStation.isAutonomous()){
-					drive.setLDrive(0.29);
-					drive.setRDrive(0.3);
+			while(driverStation.isAutonomous()){
+				while (!timer){
+					drive.setLDrive(0.496);
+					drive.setRDrive(0.5);
 					
-					time.schedule(new TimerTask(){
-					@Override	
-					public void run() {
-						timer = true;
-					}
-					}, 2850);
+//					time.schedule(new TimerTask(){
+//					@Override	
+//					public void run() {
+//						timer = true;
+//					}
+//					}, 2000);
 				
 				}
 				drive.stop();
-			
-				while (!timer && driverStation.isAutonomous()){
-					drive.setLDrive(0.2);
-					drive.setRDrive(0.2);
-					
-					time.schedule(new TimerTask(){
-					@Override	
-					public void run() {
-						timer = true;
-					}
-					}, 2850);
-				
-				}
-				drive.stop();
-				
+			}
 			break;
 		
 		case baseline:
-
-			while (!timer){
-				drive.setLDrive(0.496);
-				drive.setRDrive(0.5);
-				
-				time.schedule(new TimerTask(){
-				@Override	
-				public void run() {
-					timer = true;
-				}
-				}, 2250);
-			
-			}
-			drive.stop();
+//
+//			while (!timer){
+//				drive.setLDrive(0.496);
+//				drive.setRDrive(0.5);
+//				
+//				time.schedule(new TimerTask(){
+//				@Override	
+//				public void run() {
+//					timer = true;
+//				}
+//				}, 2500);
+//			
+//			}
+//			drive.stop();
 			
 			
 			break;
 			
 		case gear:
-			resetEncoders();
-//			if(timer)
-//				return;
-			double encoderDistance = rEncoder.getDistance();
-			encoderPid.set(0);
-			encoderPid.start();
-			drive.setLDrive(.3);
-			drive.setRDrive(.3);			
-			int counter = 0;
-			while(encoderDistance < 7.7 && driverStation.isAutonomous()){
-				encoderDistance = rEncoder.getDistance();
-				counter++;
-				if(counter >= 500){
-					counter = 0;
-					System.out.println("R Encoder: " + encoderDistance + " Error: " + encoderPid.getError());
-					
-				}
-			}
-			encoderPid.stop();
-			drive.stop();
-			timer = false;
-//			while (!timer){
-//				drive.setLDrive(0.296);
-//				drive.setRDrive(0.3);
-//				System.out.println(rEncoder.getDistance());
-//				time.schedule(new TimerTask(){
-//				@Override	
-//				public void run() {
-//					timer = true;
-//					
-//				}
-//				}, 2300);
-//			
-//			}
-			drive.stop();
-			
-			
+		
 			break;
 			
 		default:
@@ -183,9 +130,36 @@ public class Robot extends IterativeRobot {
 	}
 		
 
-	
+
 	@Override
 	public void teleopPeriodic() {
+		if (Control.drive.isButtonPushed(CTRL_BTN.A)){
+			autoFunc.DriveStraightFor(36);
+			Timer.delay(1);
+			autoFunc.RotateToDegreesIteration(-60, 1, .3);
+			Timer.delay(1);
+			autoFunc.DriveStraightFor(36);
+			
+			
+		}
+		if (Control.drive.isButtonPushed(CTRL_BTN.Y)){
+			autoFunc.DriveStraightFor(36);
+
+		}
+		if (Control.drive.isButtonPushed(CTRL_BTN.X)){
+			autoFunc.DriveStraightFor(36);
+			Timer.delay(1);
+			autoFunc.RotateToDegreesIteration(60, .5, .3);
+			Timer.delay(1);
+			autoFunc.DriveStraightFor(36);
+		}
+		
+		if (Control.drive.isButtonPushed(CTRL_BTN.B)){
+		gyro.reset();
+		resetEncoders();
+		}
+		
+
 		double throttle = -Control.drive.get(CTRL_AXIS.LY);
 		double turn = Control.drive.get(CTRL_AXIS.RX);
 		double shifter = Control.drive.isButtonHeld(CTRL_BTN.R) ? 0.5 : 1.0;
@@ -197,103 +171,52 @@ public class Robot extends IterativeRobot {
 
 			drive.setRDrive(throttle * shifter * (1 - Math.max(0, turn)));
 			drive.setLDrive(throttle * shifter * (1 + Math.min(0, turn)));
-		}
 		
-		if (Control.operator.isButtonPushed(CTRL_BTN.B)){
-			resetEncoders();
-			
 		}
-		
-		counter++;
-		if(counter >= 200){
-			System.out.println("Left distance: " + lEncoder.getDistance() + " Right distance: " + rEncoder.getDistance());
-			counter = 0;		
-		}
+
 	}
 	
-	public void VisionTrack(double target){
-		PixyPacket pkt = i2c.getPixy();
-		System.out.println(pkt.y);
-		if(pkt.y != -1){
-			pixyPid.set(target);
-			pixyPid.start();
-			System.out.println("Test1");
-			while(pkt.y < target - .04  || pkt.y > target + .04){
-				System.out.println("Test2");
-				if(pkt.area == -1)
-					break;
-				System.out.println("YPos: " + pkt.y + "PID Value: " + pixyPid.getMotorValue());
-				pkt = i2c.getPixy();
-			}
-			pixyPid.stop();
-			drive.stop();
-		}
-//			
-//			if(pkt.y < target - .05 || pkt.y > target + .05){//Only start PID if off centered
-//				//pixyPid.set(target);
-//				//pixyPid.start();
-//				while(pkt.y < target -.06 || pkt.y > target + .06){
-//					if(pkt.y == -1 || !Control.drive.isButtonHeld(CTRL_BTN.Y)){//Restart loop if ball lost during turn
-//						//pixyPid.stop();
-//						drive.stop();
-//						return;
-//						//break;
-//					}
-//					if(pkt.y < target - .06){
-//						drive.setLDrive(0.2);
-//						drive.setRDrive(-0.2);
-//					}else if(pkt.y > target + .06){
-//						drive.setLDrive(-0.2);
-//						drive.setRDrive(0.2);
-//					}else{
-//						break;
-//					}
-//					pkt = i2c.getPixy();
-//					System.out.println("YPos: " + pkt.y);
-//
-//				}
-//				drive.stop();
-				//pixyPid.stop();			
-//			if(pkt.area <= minArea && pkt.area > 0){
-//				drive.setLDrive(0.3);
-//				drive.setRDrive(0.3);
-//				System.out.println("Area: " + pkt.area);
-//			}else if(pkt.area >= maxArea && maxArea > 0){
-//				drive.setLDrive(-0.3);
-//				drive.setRDrive(-0.3);
-//				System.out.println("Area: " + pkt.area);
-
-//			}else{
-//				drive.stop();
-//				System.out.println("Area: " + pkt.area);
-//			}
-			
-//		}else{//Don't move if see nothing
-//			drive.stop();
-//		}
-		
-		
-	}
 	
 	public void resetEncoders(){
 		lEncoder.reset();
-		rEncoder.reset();
-	}
-	
-	public void driveStraight(double speed, double distance){
-		rEncoder.reset();
-		lEncoder.reset();
-		encoderPid.set(0);
-		encoderPid.start();
-		drive.setRDrive(speed);
-		while (rEncoder.getDistance() <= distance){
-			encoderPid.set(rEncoder.getDistance());
-		}
-		encoderPid.stop();
-		drive.stop();
 	}
 
-		
+//	private void visionTrack(){
+//		PixyPacket pkt = i2c.getPixy();
+//		if(pkt.x != -1){
+//			if(pkt.x < .48 || pkt.x > .52){//Only start PID if off centered
+//				pixyPid.set(0.5);
+//				pixyPid.start();
+//				while(pkt.x < .48 || pkt.x > .52){
+//					if (!Control.drive.isButtonHeld(CTRL_BTN.Y))
+//						break;
+//					if(pkt.x == -1)//Restart teleop if ball lost during turn
+//						break;
+//					
+//					pkt = i2c.getPixy();
+//					System.out.println("XPos: " + pkt.x);
+//				}
+//				pixyPid.stop();
+//			}
+//			if(pkt.area <= 0.05 && pkt.area > 0){
+//				drive.setLDrive(0.3);
+//				drive.setRDrive(0.3);
+//				System.out.println("Area: " + pkt.area);
+//			}else if(pkt.area >= 0.9){
+//				drive.setLDrive(-0.3);
+//				drive.setRDrive(-0.3);
+//				System.out.println("Area: " + pkt.area);
+//
+//			}else{
+//				drive.stop();
+//				System.out.println("Area: " + pkt.area);
+//
+//			}
+//			
+//		}else{//Dont move if see nothing
+//			drive.stop();
+//		}
+//	}
 		
 	
 	@Override
