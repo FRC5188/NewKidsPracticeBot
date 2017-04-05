@@ -25,13 +25,14 @@ public class Robot extends IterativeRobot {
 	int counter = 0;
 	String auto;
 	double error = 0;
+	static boolean ifCenter = false; 
 	
 	Encoder lEncoder = new Encoder(2,3);
 
 	
-//	M_I2C i2c = new M_I2C();
+	M_I2C i2c = new M_I2C();
 	AHRS gyro = new AHRS(SerialPort.Port.kMXP);
-//	PixySensor pidPixy = new PixySensor(i2c);
+	PixySensor pidPixy = new PixySensor(i2c);
 	
 	DriverStation driverStation = DriverStation.getInstance();
 	
@@ -43,7 +44,7 @@ public class Robot extends IterativeRobot {
 	GyroSensorActuator pidGyro = new GyroSensorActuator(drive, gyro);
 	SendableChooser<String> chooser = new SendableChooser<>();
 	
-//	Pats_PID_Controller pixyPid = new Pats_PID_Controller(0.5, .006 , .0006 , 10, pidPixy, pidGyro);
+	Pats_PID_Controller pixyPid = new Pats_PID_Controller(.32, .002 , 0.001 , 10, pidPixy, pidGyro);
 
 
 	Timer time = new Timer();
@@ -142,21 +143,25 @@ public class Robot extends IterativeRobot {
 			
 			
 		}
-		if (Control.drive.isButtonPushed(CTRL_BTN.Y)){
-			autoFunc.DriveStraightFor(36);
-
+		if (Control.drive.isButtonHeld(CTRL_BTN.Y) && !ifCenter){
+//			autoFunc.DriveStraightFor(36);
+			visionTrack();
+			return;
 		}
 		if (Control.drive.isButtonPushed(CTRL_BTN.X)){
 			autoFunc.DriveStraightFor(36);
 			Timer.delay(1);
-			autoFunc.RotateToDegreesIteration(60, .5, .3);
+			autoFunc.RotateToDegreesIteration(90, .5, .3);
 			Timer.delay(1);
-			autoFunc.DriveStraightFor(36);
+			visionTrack();
+			Timer.delay(1);
+			autoFunc.DriveStraightFor(24);
 		}
 		
 		if (Control.drive.isButtonPushed(CTRL_BTN.B)){
 		gyro.reset();
 		resetEncoders();
+		ifCenter = false;
 		}
 		
 
@@ -181,14 +186,14 @@ public class Robot extends IterativeRobot {
 		lEncoder.reset();
 	}
 
-//	private void visionTrack(){
-//		PixyPacket pkt = i2c.getPixy();
+	private boolean visionTrack(){
+		PixyPacket pkt = i2c.getPixy();
 //		if(pkt.x != -1){
-//			if(pkt.x < .48 || pkt.x > .52){//Only start PID if off centered
-//				pixyPid.set(0.5);
+//			if(pkt.x < .39 || pkt.x > .44){//Only start PID if off centered
+//				pixyPid.set(0.415);
 //				pixyPid.start();
-//				while(pkt.x < .48 || pkt.x > .52){
-//					if (!Control.drive.isButtonHeld(CTRL_BTN.Y))
+//				while(pkt.x < .39 || pkt.x > .44){
+//					if (Control.drive.isButtonPushed(CTRL_BTN.B))
 //						break;
 //					if(pkt.x == -1)//Restart teleop if ball lost during turn
 //						break;
@@ -198,25 +203,61 @@ public class Robot extends IterativeRobot {
 //				}
 //				pixyPid.stop();
 //			}
-//			if(pkt.area <= 0.05 && pkt.area > 0){
-//				drive.setLDrive(0.3);
-//				drive.setRDrive(0.3);
-//				System.out.println("Area: " + pkt.area);
-//			}else if(pkt.area >= 0.9){
-//				drive.setLDrive(-0.3);
-//				drive.setRDrive(-0.3);
-//				System.out.println("Area: " + pkt.area);
-//
-//			}else{
-//				drive.stop();
-//				System.out.println("Area: " + pkt.area);
-//
-//			}
-//			
-//		}else{//Dont move if see nothing
-//			drive.stop();
-//		}
-//	}
+//			pixyPid.stop();
+		if(pkt.x != -1){
+			if(pkt.x < .39 || pkt.x > .44){//Only start PID if off centered
+				while(pkt.x < .39 || pkt.x > .44){
+					
+					if(pkt.x < .39){
+						drive.setLDrive(-0.2);
+						drive.setRDrive(0.2);
+						
+					}
+					if(pkt.x > .44){
+						drive.setLDrive(0.2);
+						drive.setRDrive(-0.2);
+					}
+					if (Control.drive.isButtonHeld(CTRL_BTN.B))
+						break;
+					if(pkt.y == -1)//Restart teleop if ball lost during turn
+						break;
+					pkt = i2c.getPixy();
+					System.out.println("XPos: " + pkt.x);
+				}
+				pixyPid.stop();
+				pkt = i2c.getPixy();
+
+			}
+			pixyPid.stop();
+			if(pkt.area >= 0.1 && pkt.area <= 0.16){
+				drive.stop();
+				ifCenter = true;
+			}
+			if(pkt.area <= 0.12 && pkt.area > 0){
+				pixyPid.stop();
+				drive.setLDrive(0.3);
+				drive.setRDrive(0.3);
+				System.out.println("Area: " + pkt.area);
+				pkt = i2c.getPixy();
+
+			}else if(pkt.area >= 0.14){
+				pixyPid.stop();
+				drive.setLDrive(-0.3);
+				drive.setRDrive(-0.3);
+				System.out.println("Area: " + pkt.area);
+
+
+			}else{
+				drive.stop();
+				System.out.println("Area: " + pkt.area);
+
+			}
+			
+		}else{//Don't move if see nothing
+			drive.stop();
+		}
+		return ifCenter;
+	}
 		
 	
 	@Override

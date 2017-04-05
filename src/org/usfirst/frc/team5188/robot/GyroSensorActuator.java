@@ -21,7 +21,7 @@ public class GyroSensorActuator implements PID_Actuator, PID_Sensor {
 
 	@Override
 	public void set(double value) {
-		drive.setLDrive(-value);
-		drive.setRDrive(value);
+		drive.setLDrive(value);
+		drive.setRDrive(-value);
 	}
 }
